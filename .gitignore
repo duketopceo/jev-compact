@@ -1,0 +1,14 @@
+.env
+.env.local
+*.pyc
+__pycache__/
+.DS_Store
+node_modules/
+.next/
+dist/
+build/
+*.log
+.vscode/
+*.egg-info/
+.pytest_cache/
+.jev-compact/

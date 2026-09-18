@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jev-compact"
+version = "0.1.0"
+description = "Moving-highlight context compaction for agent harnesses — score, retain verbatim, tombstone, restore"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+authors = [{ name = "Luke Kimball" }]
+keywords = ["context-compaction", "llm", "agents", "claude-code", "mcp"]
+
+[project.scripts]
+jev-compact = "jev_compact.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
