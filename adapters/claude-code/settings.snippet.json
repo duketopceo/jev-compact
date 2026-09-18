@@ -1,0 +1,33 @@
+{
+  "hooks": {
+    "PreCompact": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 /path/to/jev-compact/adapters/claude-code/hooks/precompact.py"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 /path/to/jev-compact/adapters/claude-code/hooks/sessionstart.py"
+          }
+        ]
+      }
+    ]
+  },
+  "mcpServers": {
+    "context-restore": {
+      "command": "/usr/bin/python3",
+      "args": ["/path/to/jev-compact/mcp/restore_server.py"],
+      "env": { "JEV_STORE_DIR": ".jev-compact" }
+    }
+  }
+}
