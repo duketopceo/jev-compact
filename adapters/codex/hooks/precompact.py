@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
-"""Claude Code PreCompact hook for jev-compact.
+"""Codex PreCompact hook for jev-compact.
 
-Runs the compaction pipeline before the harness compacts, storing the
-result for the SessionStart hook to inject. Pair with the
-compact-instructions snippet in CLAUDE.md so the built-in summary is a
-placeholder and jev-compact's output is what actually lands in context.
+Runs the retention pipeline before Codex compacts, storing the result
+for the SessionStart hook to inject alongside Codex's own summary.
+Codex compaction cannot be fully replaced by a hook (decision:block is
+intentionally unsupported upstream), so this adapter augments: the
+native summary still runs, and jev-compact's verbatim spans + tombstone
+receipts land on top via additionalContext.
 
-stdin  (JSON): {session_id, transcript_path, trigger: "auto"|"manual", cwd}
-stdout (JSON): {"continue": true} — never blocks; replacement happens via
-               placeholder + SessionStart injection.
+stdin  (JSON): {session_id, turn_id, transcript_path, trigger:
+                "auto"|"manual", cwd, model, hook_event_name}
+stdout (JSON): {"continue": true} — never blocks; a hook failure must
+               not stall the session.
 """
 
 from __future__ import annotations
@@ -24,7 +27,7 @@ STORE_DIR = Path(os.environ.get("JEV_STORE_DIR", ".jev-compact"))
 BUDGET = os.environ.get("JEV_BUDGET_TOKENS", "8000")
 
 # Dev-checkout fallback: when jev_compact isn't installed, run it from
-# the repo src/ (this file lives at adapters/claude-code/hooks/precompact.py).
+# the repo src/ (this file lives at adapters/codex/hooks/precompact.py).
 _REPO_SRC = Path(__file__).resolve().parents[3] / "src"
 
 
@@ -49,7 +52,7 @@ def main() -> int:
         event = json.loads(sys.stdin.read() or "{}")
     except json.JSONDecodeError:
         event = {}
-    transcript = event.get("transcript_path", "")
+    transcript = event.get("transcript_path") or ""
     cwd = event.get("cwd") or os.getcwd()
     store_dir = Path(cwd) / STORE_DIR
     out_file = store_dir / "out.md"

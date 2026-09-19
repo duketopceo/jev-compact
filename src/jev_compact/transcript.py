@@ -2,6 +2,7 @@
 
 Supported inputs:
   - Claude Code session transcripts (JSONL, `type`/`message` records)
+  - Codex rollout transcripts (JSONL, `type`/`payload` records)
   - Generic NDJSON (`{"role": ..., "content"|"text": ...}` per line)
   - A JSON array of the same generic objects
 
@@ -39,8 +40,50 @@ def load(path: Path) -> list[dict[str, Any]]:
 def iter_record(obj: dict[str, Any]) -> Iterable[dict[str, Any]]:
     if "type" in obj and "message" in obj:
         yield from iter_claude_code(obj)
+    elif obj.get("type") == "response_item":
+        yield from iter_codex(obj)
+    elif obj.get("type") in _CODEX_META_TYPES:
+        return  # rollout metadata — noise, not conversation content
     else:
         yield from iter_generic([obj])
+
+
+_CODEX_META_TYPES = {
+    "session_meta", "event_msg", "world_state", "turn_context",
+    "compacted", "token_count",
+}
+
+
+def iter_codex(obj: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Codex rollout JSONL: {type:"response_item", payload:{type,...}}."""
+    ts = obj.get("timestamp")
+    p = obj.get("payload")
+    if not isinstance(p, dict):
+        return
+    ptype = p.get("type")
+    if ptype == "message":
+        role = p.get("role", "other")
+        text = "\n".join(
+            str(b.get("text", ""))
+            for b in p.get("content") or []
+            if isinstance(b, dict)
+        )
+        yield _ev(_kind(role), text, ts)
+    elif ptype == "function_call":
+        name = p.get("name", "tool")
+        yield _ev("tool_call", f"{name}: {p.get('arguments', '')}"[:MAX_EVENT_CHARS], ts, tool=name)
+    elif ptype in ("function_call_output", "local_shell_call_output", "custom_tool_call_output"):
+        out = p.get("output", "")
+        if not isinstance(out, str):
+            out = json.dumps(out)
+        yield _ev("tool_result", out, ts)
+    elif ptype == "reasoning":
+        summary = p.get("summary") or []
+        text = " ".join(
+            str(b.get("text", "")) for b in summary if isinstance(b, dict)
+        )
+        if text.strip():
+            yield _ev("assistant_text", text, ts)
 
 
 def iter_claude_code(obj: dict[str, Any]) -> Iterable[dict[str, Any]]:

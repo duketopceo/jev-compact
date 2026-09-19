@@ -77,3 +77,29 @@ def test_content_list_joined(tmp_path):
     )
     ev = transcript.load(p)
     assert ev[0]["text"] == "a\nb"
+
+
+def test_codex_rollout_parsed(tmp_path):
+    lines = [
+        {"type": "session_meta", "payload": {"session_id": "x"}},
+        {"type": "response_item", "timestamp": "1",
+         "payload": {"type": "message", "role": "user",
+                     "content": [{"type": "input_text", "text": "fix the lidar"}]}},
+        {"type": "response_item", "timestamp": "2",
+         "payload": {"type": "message", "role": "assistant",
+                     "content": [{"type": "output_text", "text": "looking"}]}},
+        {"type": "response_item", "timestamp": "3",
+         "payload": {"type": "function_call", "name": "exec_command",
+                     "arguments": "{\"cmd\": \"ls\"}"}},
+        {"type": "response_item", "timestamp": "4",
+         "payload": {"type": "function_call_output", "call_id": "c1",
+                     "output": "parser.py\nlidar.py"}},
+        {"type": "event_msg", "payload": {"type": "item_completed"}},
+        {"type": "world_state", "payload": {"full": True}},
+    ]
+    p = _write(tmp_path, "\n".join(json.dumps(l) for l in lines))
+    ev = transcript.load(p)
+    kinds = [e["kind"] for e in ev]
+    assert kinds == ["user_turn", "assistant_text", "tool_call", "tool_result"]
+    assert ev[0]["text"] == "fix the lidar"
+    assert "parser.py" in ev[3]["text"]

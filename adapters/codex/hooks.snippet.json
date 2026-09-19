@@ -1,0 +1,26 @@
+{
+  "PreCompact": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python3 /ABSOLUTE/PATH/TO/jev-compact/adapters/codex/hooks/precompact.py",
+          "timeout": 130
+        }
+      ],
+      "matcher": "manual|auto"
+    }
+  ],
+  "SessionStart": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python3 /ABSOLUTE/PATH/TO/jev-compact/adapters/codex/hooks/sessionstart.py",
+          "timeout": 15
+        }
+      ],
+      "matcher": "compact"
+    }
+  ]
+}
