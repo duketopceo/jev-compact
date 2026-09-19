@@ -60,11 +60,16 @@ the store. Compaction is therefore non-destructive end to end.
 
 ## Open questions (tracked)
 
-- Verify TypeSafe `/v1/systemone` request/response field names against a
-  live key (written from public docs). TypeSafe models are NOT served
-  on OpenRouter — the OpenRouter path scores with a generic chat model
-  (`JEV_OPENROUTER_MODEL`, verified live on llama-3.2-3b 2026-09-19).
-- Batch question calls per request once the API shape is confirmed.
+- Verify TypeSafe native `/v1/systemone` request/response field names
+  against a live key (written from public docs). The OpenRouter route
+  is verified: TypeSafe models serve via `POST /api/alpha/decisions`
+  (`~typesafe/jev-latest` = latest alias; `typesafe/jev-1.13` pinned)
+  with `state` + a `questions` map of `score`/`noul`/`choice`
+  primitives returning calibrated probabilities — both scoring axes in
+  one call, ~$0.000016/span. Non-TypeSafe OpenRouter slugs fall back to
+  generic chat-completions scoring (weaker discrimination).
+- Batch multiple spans per decisions request (state accepts arrays) to
+  cut per-span HTTP overhead.
 - Codex compact hooks intentionally do not support `decision:"block"`
   (openai/codex#19905) — the Codex adapter is augment-posture by
   design. `continue:false` stops compaction without injecting anything,

@@ -6,8 +6,10 @@
 
 HeuristicScorer runs fully offline and is the default when no API key
 is configured. JevScorer calls TypeSafe's System One API when
-TYPESAFE_API_KEY is set, falling back to OpenRouter chat-completions
-with OPENROUTER_API_KEY.
+TYPESAFE_API_KEY is set, or OpenRouter's Decisions API
+(/api/alpha/decisions) with OPENROUTER_API_KEY when the model is a
+TypeSafe slug (~typesafe/jev-latest, typesafe/jev-1.13). Any other
+OpenRouter model falls back to generic chat-completions scoring.
 """
 
 from __future__ import annotations
@@ -138,6 +140,8 @@ class JevScorer:
     def _score_openrouter(
         self, span: Span, highlight: Highlight, view: str
     ) -> tuple[float, float]:
+        if self._model.lstrip("~").startswith("typesafe/"):
+            return self._score_decisions(span, highlight, view)
         payload = {
             "model": self._model,
             "messages": [
@@ -169,6 +173,52 @@ class JevScorer:
             )
         except (KeyError, IndexError, TypeError, ValueError) as exc:
             raise ScorerError(f"unparseable scorer response: {exc}") from exc
+
+    def _score_decisions(
+        self, span: Span, highlight: Highlight, view: str
+    ) -> tuple[float, float]:
+        # OpenRouter Decisions API — verified live 2026-09-19.
+        payload = {
+            "model": self._model,
+            "state": {
+                "highlight": highlight.text,
+                "span_kind": span.kind,
+                "span_text": view,
+            },
+            "questions": {
+                "relevance": {
+                    "type": "score",
+                    "instructions": (
+                        "How relevant is this span to the current work "
+                        "described by the highlight?"
+                    ),
+                    "criteria": [
+                        "irrelevant",
+                        "tangential",
+                        "relevant",
+                        "critical",
+                    ],
+                },
+                "load_bearing": {
+                    "type": "noul",
+                    "instructions": (
+                        "Does this span carry facts still needed to "
+                        "continue (paths, decisions, errors fixed), even "
+                        "if off-topic?"
+                    ),
+                    "true": "Contains still-needed facts",
+                    "false": "Safely droppable",
+                },
+            },
+        }
+        data = self._post(f"{self._base}/api/alpha/decisions", payload)
+        try:
+            answers = data["answers"]
+            rel = float(answers["relevance"]["score"]) / 3.0
+            load = float(answers["load_bearing"]["noul"])
+            return _clamp01(rel), _clamp01(load)
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ScorerError(f"unparseable decisions response: {exc}") from exc
 
     def _post(self, url: str, payload: dict) -> dict:
         body = json.dumps(payload).encode()
@@ -206,12 +256,12 @@ def resolve(name: str = "auto", total_spans: int = 1) -> Scorer:
             api_base=os.environ.get("TYPESAFE_API_BASE", "https://api.typesafe.ai"),
         )
     if or_key:
-        # TypeSafe models are not served on OpenRouter — this path scores
-        # with a generic chat model returning {rel, load} JSON.
+        # TypeSafe decisions models route to /api/alpha/decisions; any
+        # other model slug uses generic chat-completions scoring.
         return JevScorer(
             or_key,
             model=os.environ.get(
-                "JEV_OPENROUTER_MODEL", "google/gemma-3-12b-it"
+                "JEV_OPENROUTER_MODEL", "~typesafe/jev-latest"
             ),
             api_base="https://openrouter.ai",
             via="openrouter",
