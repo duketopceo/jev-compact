@@ -84,10 +84,12 @@ def compact(
         run.clear()
 
     for sp in spans:
-        if sp.id in keep_ids:
+        if sp.id in keep_ids and sp.text.strip():
             flush()
             body.append(f"[{sp.id} · {sp.kind}]\n{sp.text}")
             tokens_after += sp.token_est
+        elif sp.id in keep_ids:
+            continue  # kept but empty — no content to emit or restore
         else:
             run.append(sp)
     flush()
@@ -111,5 +113,5 @@ def compact(
 
 def _receipt(rng: str, run: list[Span]) -> str:
     kinds = ",".join(sorted({s.kind for s in run}))
-    first = run[0].preview
+    first = next((s.preview for s in run if s.text.strip()), "(empty)")
     return f"[[{rng} tombstoned · {len(run)} span(s) · {kinds} · begins: {first}]]"

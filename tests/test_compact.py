@@ -84,3 +84,34 @@ def test_stats_ratio():
     result = compact.compact(sp, hl, FixedScorer({}), 100)
     assert 0 < result.stats["ratio"] <= 1
     assert result.stats["spans"] == len(sp)
+
+
+def test_empty_kept_spans_not_emitted():
+    ev = [
+        _ev("user_turn", "do the thing"),
+        _ev("other", ""),
+        _ev("assistant_text", "done"),
+    ]
+    sp = spans.segment(ev)
+    hl = highlight.extract(sp)
+    # generous budget keeps everything scored — but the empty span must not emit
+    result = compact.compact(sp, hl, FixedScorer({}), 5000)
+    assert "[s1 · other]" not in result.text
+    assert "do the thing" in result.text
+
+
+def test_receipt_uses_first_nonempty_preview():
+    ev = [
+        _ev("other", ""),
+        _ev("assistant_text", "early moon research content " * 40),
+        _ev("other", ""),
+    ]
+    # filler pushes the early spans into the scored head (tail keeps last 24)
+    ev += [_ev("assistant_text", f"recent work chunk {i} " * 20) for i in range(28)]
+    sp = spans.segment(ev)
+    hl = highlight.extract(sp)
+    result = compact.compact(sp, hl, FixedScorer({}), 200)
+    receipts = [r for _, r in result.tombstoned]
+    assert receipts
+    assert any("moon research" in r for r in receipts)
+    assert not any("begins: (empty)" in r for r in receipts if "moon" in r)
