@@ -28,7 +28,7 @@ Context compaction engine for agent harnesses. Scores transcript spans against t
 
 ## Active Issues / Known State
 
-- `JevScorer` TypeSafe `/v1/systemone` request schema written from public docs — must be verified against a live key before first release; OpenRouter chat path is the known-good fallback.
+- `JevScorer` TypeSafe `/v1/systemone` request schema written from public docs — must be verified against a live key before first release. TypeSafe models are NOT on OpenRouter; the OpenRouter path scores with a generic chat model (`JEV_OPENROUTER_MODEL`) — verified live 2026-09-19 (~$0.00001/span on llama-3.2-3b, JSON output clean, calibration mediocre on 3B — tune the model for quality).
 - Codex + OpenCode adapters not yet wired (see tracking issue).
 
 ## Agent Instructions (repo-specific)

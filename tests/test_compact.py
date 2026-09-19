@@ -106,7 +106,7 @@ def test_receipt_uses_first_nonempty_preview():
         _ev("assistant_text", "early moon research content " * 40),
         _ev("other", ""),
     ]
-    # filler pushes the early spans into the scored head (tail keeps last 24)
+    # filler pushes the early spans into the scored head (tail keeps last TAIL_KEEP)
     ev += [_ev("assistant_text", f"recent work chunk {i} " * 20) for i in range(28)]
     sp = spans.segment(ev)
     hl = highlight.extract(sp)

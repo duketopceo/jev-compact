@@ -8,6 +8,8 @@ transcript stays in the span store and tombstones resolve via
 
 from __future__ import annotations
 
+import os
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
 from .highlight import Highlight
@@ -18,6 +20,8 @@ TAIL_KEEP = 4          # the live edge of the conversation is never scored out
 PIN_LOAD = 0.8         # load_bearing at/above this survives regardless of budget
 W_REL, W_LOAD = 0.65, 0.35
 TOMBSTONE_TOKENS = 12  # est. cost per tombstone line
+SCORE_WORKERS = int(os.environ.get("JEV_SCORE_WORKERS", "8"))
+SCORE_PARALLEL_MIN = 8  # below this many head spans, score sequentially
 
 
 @dataclass
@@ -44,8 +48,17 @@ def compact(
     head = [s for s in spans if s.id not in tail_ids]
 
     scored: list[tuple[Span, float, float, float]] = []  # span, rel, load, composite
+    raw: dict[str, tuple[float, float]] = {}
+    if getattr(scorer, "parallel_ok", False) and len(head) >= SCORE_PARALLEL_MIN:
+        with ThreadPoolExecutor(max_workers=SCORE_WORKERS) as pool:
+            futs = {sp.id: pool.submit(scorer.score, sp, highlight) for sp in head}
+            for sid, fut in futs.items():
+                raw[sid] = fut.result()
+    else:
+        for sp in head:
+            raw[sp.id] = scorer.score(sp, highlight)
     for sp in head:
-        rel, load = scorer.score(sp, highlight)
+        rel, load = raw[sp.id]
         scored.append((sp, rel, load, W_REL * rel + W_LOAD * load))
 
     header_tokens = est_tokens(highlight.text)

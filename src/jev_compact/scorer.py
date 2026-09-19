@@ -80,6 +80,8 @@ class ScorerError(RuntimeError):
 class JevScorer:
     """Scores spans via TypeSafe Jev (native API) or OpenRouter chat fallback."""
 
+    parallel_ok = True  # I/O-bound HTTP scoring — safe under ThreadPoolExecutor
+
     def __init__(
         self,
         api_key: str,
@@ -137,7 +139,7 @@ class JevScorer:
         self, span: Span, highlight: Highlight, view: str
     ) -> tuple[float, float]:
         payload = {
-            "model": f"typesafe/{self._model}",
+            "model": self._model,
             "messages": [
                 {
                     "role": "system",
@@ -197,16 +199,22 @@ def resolve(name: str = "auto", total_spans: int = 1) -> Scorer:
         return HeuristicScorer(total_spans)
     ts_key = os.environ.get("TYPESAFE_API_KEY")
     or_key = os.environ.get("OPENROUTER_API_KEY")
-    model = os.environ.get("JEV_MODEL", "jev-latest")
     if ts_key:
         return JevScorer(
             ts_key,
-            model=model,
+            model=os.environ.get("JEV_MODEL", "jev-latest"),
             api_base=os.environ.get("TYPESAFE_API_BASE", "https://api.typesafe.ai"),
         )
     if or_key:
+        # TypeSafe models are not served on OpenRouter — this path scores
+        # with a generic chat model returning {rel, load} JSON.
         return JevScorer(
-            or_key, model=model, api_base="https://openrouter.ai", via="openrouter"
+            or_key,
+            model=os.environ.get(
+                "JEV_OPENROUTER_MODEL", "google/gemma-3-12b-it"
+            ),
+            api_base="https://openrouter.ai",
+            via="openrouter",
         )
     if name == "jev":
         raise ScorerError("no TYPESAFE_API_KEY or OPENROUTER_API_KEY in env")

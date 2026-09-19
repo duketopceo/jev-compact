@@ -61,8 +61,9 @@ the store. Compaction is therefore non-destructive end to end.
 ## Open questions (tracked)
 
 - Verify TypeSafe `/v1/systemone` request/response field names against a
-  live key (written from public docs). OpenRouter chat path is the
-  known-good fallback meanwhile.
+  live key (written from public docs). TypeSafe models are NOT served
+  on OpenRouter — the OpenRouter path scores with a generic chat model
+  (`JEV_OPENROUTER_MODEL`, verified live on llama-3.2-3b 2026-09-19).
 - Batch question calls per request once the API shape is confirmed.
 - Codex compact hooks intentionally do not support `decision:"block"`
   (openai/codex#19905) — the Codex adapter is augment-posture by
