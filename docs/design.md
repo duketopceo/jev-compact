@@ -64,7 +64,9 @@ the store. Compaction is therefore non-destructive end to end.
   live key (written from public docs). OpenRouter chat path is the
   known-good fallback meanwhile.
 - Batch question calls per request once the API shape is confirmed.
-- Whether Codex's compaction can be *blocked* like Claude Code's
-  `{"decision":"block"}` — compact-plus only proves the augment path.
+- Codex compact hooks intentionally do not support `decision:"block"`
+  (openai/codex#19905) — the Codex adapter is augment-posture by
+  design. `continue:false` stops compaction without injecting anything,
+  which only makes auto-compaction retry.
 - Dependency-closure pass: rescore "is span X needed to understand the
   kept set?" — likely unnecessary at span granularity; revisit with data.

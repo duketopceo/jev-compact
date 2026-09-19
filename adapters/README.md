@@ -22,9 +22,9 @@ Every adapter must do three things:
 
 | Harness | Intercept | Inject | Restore | Status |
 |---------|-----------|--------|---------|--------|
-| Claude Code | `PreCompact` hook | `SessionStart(source=compact)` `additionalContext` | MCP | `adapters/claude-code/` |
-| Codex | plugin hook (per compact-plus pattern) | `additionalContext` | MCP | not wired — see tracking issue |
-| OpenCode | JS plugin event hooks | plugin context surface | MCP | not wired |
+| Claude Code | `PreCompact` hook | `SessionStart(source=compact)` `additionalContext` | MCP | `adapters/claude-code/` — full replacement via placeholder+inject |
+| Codex | `PreCompact` hook (`manual|auto`) | `SessionStart(source=compact)` `additionalContext` | MCP | `adapters/codex/` — augment (upstream gives compact hooks no block) |
+| OpenCode | `experimental.session.compacting` | `output.context.push` | MCP | `adapters/opencode/` — augment (summarizer always mediates) |
 | OpenClaw | gateway/plugin SDK | context surface | MCP | not wired |
 | Devin | none — compaction is harness-owned | rules/skills only | MCP only | restore-only |
 | Any base-url harness | local proxy intercepting the API payload | rewritten request body | MCP | design only |
