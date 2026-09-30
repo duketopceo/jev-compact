@@ -12,3 +12,6 @@ build/
 *.egg-info/
 .pytest_cache/
 .jev-compact/
+
+# codebase-memory-mcp local index cache
+.codebase-memory/
