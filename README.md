@@ -1,5 +1,7 @@
 # jev-compact
 
+[![M8ven Trust Index](https://m8ven.ai/badge/mcp/duketopceo/jev-compact)](https://m8ven.ai/mcp/duketopceo/jev-compact)
+
 > Context compaction for agent harnesses: a decision-model scores each transcript span against the conversation's moving highlight, keeps what still matters verbatim, tombstones the rest — restorable on demand.
 
 ## Stack
