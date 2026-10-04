@@ -40,7 +40,9 @@ def main(argv: list[str] | None = None) -> int:
     r = sub.add_parser("restore", help="rehydrate a tombstoned span range")
     r.add_argument("--store", type=Path, default=Path(".jev-compact"))
     r.add_argument("--session", help="session id (default: latest)")
-    r.add_argument("--span", required=True, help="s4 or s4-s9")
+    # --span is required unless --list is given; argparse can't express that,
+    # so the check lives in the handler (previously --list was unreachable).
+    r.add_argument("--span", help="s4 or s4-s9 (required unless --list)")
     r.add_argument("--list", action="store_true", help="list tombstones instead")
 
     args = ap.parse_args(argv)
@@ -104,6 +106,8 @@ def _compact(args: argparse.Namespace) -> int:
 
 
 def _restore(args: argparse.Namespace) -> int:
+    if not args.span and not args.list:
+        _die("restore requires --span sN[-sM], or --list to show tombstones")
     session = args.session or store.latest_session(args.store)
     if session is None:
         _die(f"no sessions under {args.store}")

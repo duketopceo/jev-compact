@@ -51,3 +51,14 @@ Local tool — no deploy. Optional service mode: run `python mcp/restore_server.
 - `docs/design.md` — algorithm spec, scoring axes, adapter contract, harness matrix
 - `adapters/` — per-harness wiring (Claude Code ready)
 - See `AGENTS.md` for agent context.
+
+## Known behaviors
+
+**`--budget` is a target, not a hard cap.** The last `TAIL_KEEP` spans are
+never scored out, and tombstone receipts add tokens back. A budget below the
+tail size will still overshoot — `80 -> 82 tok` at `--budget 40` is expected,
+not a bug. Check the printed `before -> after (n%)` line.
+
+**`restore --store` takes the parent directory.** Pass `.jev-compact`, not
+the session subdirectory: `latest_session()` scans for session dirs *under*
+the path you give it.
