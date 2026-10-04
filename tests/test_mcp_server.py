@@ -7,24 +7,39 @@ imports cleanly but speaks the wrong protocol is still broken.
 import json
 import subprocess
 import sys
+import threading
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 SERVER = REPO / "mcp" / "restore_server.py"
 
+# Generous: the server is local, so anything beyond this is a hang, not slow.
+REPLY_TIMEOUT_S = 10
+
 
 def rpc(proc, payload):
-    """Send one framed JSON-RPC message and read the reply."""
+    """Send one framed JSON-RPC message and read the reply under a deadline.
+
+    A bare readline() blocks forever when the server stays alive but stops
+    replying, which would hang CI instead of reporting a protocol failure.
+    An iteration-count loop is not a timeout either — every iteration blocks.
+    """
     proc.stdin.write(json.dumps(payload) + "\n")
     proc.stdin.flush()
-    for _ in range(200):
-        line = proc.stdout.readline()
-        if not line:
-            return None
-        line = line.strip()
-        if line:
-            return json.loads(line)
-    return None
+
+    box: list = []
+    reader = threading.Thread(
+        target=lambda: box.append(proc.stdout.readline()), daemon=True)
+    reader.start()
+    reader.join(REPLY_TIMEOUT_S)
+    if reader.is_alive() or not box:
+        # Unresponsive: reap the server so it cannot outlive the test.
+        proc.kill()
+        proc.wait(timeout=5)
+        raise AssertionError(
+            f"no reply to {payload.get('method')} within {REPLY_TIMEOUT_S}s")
+    line = box[0].strip()
+    return json.loads(line) if line else None
 
 
 def start(cwd):
