@@ -9,7 +9,7 @@
 - Python 3.11+ (stdlib only — no runtime deps)
 - TypeSafe **Jev** System One model (`jev-latest`) for calibrated span scoring; heuristic scorer works offline
 - MCP (stdio JSON-RPC) restore server — `context-restore` for tombstone rehydration
-- Harness adapters: Claude Code (PreCompact + SessionStart), Codex and OpenCode next
+- Harness adapters (`adapters/`): Claude Code (PreCompact + SessionStart), Codex (rollout transcript parser + PreCompact/SessionStart), OpenCode (`session.compacting` plugin)
 
 ## How it works
 
